@@ -1,0 +1,52 @@
+<?php
+
+// $Id$
+
+/**
+ * @file
+ *
+ */
+
+/**
+ * Implementation of hook_install.
+ */
+function ir_bibliography_install() {
+  drupal_install_schema('ir_bibliography');
+}
+
+/**
+ * Implementation of hook_uninstall.
+ */
+function ir_bibliography_uninstall() {
+  drupal_uninstall_schema('ir_bibliography');
+}
+
+/**
+ * Implementation of hook_schema()
+ * @return array of Schema API table definitions.
+ */
+function ir_bibliography_schema() {
+  $schema['ir_bibliography'] = array(
+    'description' => t('This table is used to store the pid (and Uid) of the citutations a Druapl user has selected.'),
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => t('Uid of the Drupal user.'),
+        'type' => 'int',
+        'length' =>10,
+        'not null' => TRUE
+      ),
+      'pid' => array(
+        'description' => t('Pid of the Fedora object.'),
+        'type' => 'text',
+        'size' => 'medium',
+        
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}

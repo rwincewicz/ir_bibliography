@@ -1,0 +1,78 @@
+<?php
+
+/**
+ * 
+ */
+
+/**
+* Valid permissions for this module
+* @return array An array of valid permissions for the onthisdate module
+*/
+function ir_bibliography_perm() {
+  return array('create ir bibliography');
+}
+
+
+function ir_bibliography_menu() {
+  $items = array();
+  $items['ir_bibliography'] = array(
+    'title' => t('IR Bibliography'),
+    'page callback' => 'ir_bibliography_view',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('create ir bibliography'),
+  );
+  return $items;
+}
+
+
+
+function ir_bibliography_view_table() {
+    $query = db_query("SELECT uid,pid FROM {ir_bibliography}");
+    $data = array();
+
+    $i = 0;
+    while ($row = db_fetch_array($query)) {
+        $data[$i] = $row;
+        $i++;
+    }
+    
+    $header = array('Pid','Abstract','w/select dropdown');
+    
+    return theme_table($header, $data, $attributes = NULL);
+};
+
+function ir_bibliography_form_table() {
+    $form = array();
+
+    $form['citation_alter'] = array(
+        '#type' => 'select',
+        '#title' => t('With Checked'),
+        '#options' => array("Select...", "Remove","Export"),
+        '#required' => TRUE,
+    ); //$form['citation_alter'] = array
+    
+
+    $query = db_query("SELECT uid,pid FROM {ir_bibliography}");
+    $data = array();
+
+    $i = 0;
+    while ($row = db_fetch_array($query)) {
+        $data[$i] = $row;
+        $i++;
+    }
+    //eventually get pids from DB and list along with object title and or abstract from fedora
+    $pids = array(22 => 'Object title 1', 33 => 'Object title 2 -list abstract?');
+
+
+    $form['pid_box'] = array(
+        '#type' => 'checkboxes',
+        '#options' => $pids,
+    );
+
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
+  return $form;
+}
+
+function ir_bibliography_view() {
+  return drupal_get_form('ir_bibliography_form_table');
+}
