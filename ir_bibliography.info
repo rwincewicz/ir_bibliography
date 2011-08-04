@@ -3,5 +3,5 @@ name = IR Bibliography
 description = Provides a option to select citations and save them to a drupal user account or anonymous sessionID
 package = Fedora Repository
 dependencies[] = fedora_repository
-version = 6.1dev
+version = 6.x-$Format:%h$-dev
 core = 6.x

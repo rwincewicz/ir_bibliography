@@ -27,24 +27,25 @@ function ir_bibliography_uninstall() {
  */
 function ir_bibliography_schema() {
   $schema['ir_bibliography'] = array(
-    'description' => t('This table is used to store the pid (and Uid) of the citutations a Druapl user has selected.'),
+    'description' => t('This table is used to store the pid and uid of the citutations a Druapl user has selected.'),
     'fields' => array(
       'id' => array(
         'type' => 'serial',
         'not null' => TRUE,
       ),
       'uid' => array(
-        'description' => t('Uid of the Drupal user.'),
+        'description' => t('uid of the Drupal user.'),
         'type' => 'int',
         'length' =>10,
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
-      'pid' => array(
-        'description' => t('Pid of the Fedora object.'),
-        'type' => 'text',
-        'size' => 'medium',
-        
+        'pid' => array(
+        'description' => t('pid of the Fedora object'),
+        'type' => 'varchar',
+        'length' =>64,
+        'not null' => TRUE,
       ),
+      
     ),
     'primary key' => array('id'),
   );
