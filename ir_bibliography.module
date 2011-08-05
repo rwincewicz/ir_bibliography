@@ -19,7 +19,7 @@ function ir_bibliography_menu() {
     'title' => t('IR Bibliography'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('ir_bibliography_form'),
-    'type' => MENU_CALLBACK,
+    'type' => MENU_NORMAL_ITEM, //MENU_CALLBACK,
     'access arguments' => array('create ir bibliography'),
   );
   return $items;
@@ -28,51 +28,70 @@ function ir_bibliography_menu() {
 
 function ir_bibliography_form() {
     global $user;
-    $query = "SELECT * FROM {ir_bibliography} WHERE uid ";// = $user->uid";
-    $rs = db_query($query);
-    $status = array();
+    
     $pids = array();
+    $status = array();
+    if($user->uid){ //get pids assiocated with druapl user from drupal database
+        drupal_set_message("from user");
+        $query = "SELECT pid FROM {ir_bibliography} WHERE uid = $user->uid";
+        $rs = db_query($query); 
         if ($rs) {
             while ($data = db_fetch_object($rs)) {
-                $options[$data->id] = "";
-                $form[$data->id]['pid'] = array('#value' => stripslashes($data->pid));
-                $form[$data->id]['title'] = array('#value' => l(t("title link to object $data->id"),'http://google.ca'));
-                $form[$data->id]['abstract'] = array('#value' => stripslashes("abstract"));
-                $status[] = "";
                 $pids[] = $data->pid;
             }
 	}
-        //drupal_set_message(print_r($pids));
+    }
+    else{//get pids from session
+        //unset($_SESSION['ir_bibliography_pids']);
+        $_SESSION['ir_bibliography_pids'] = array('12:1:2121', '121:2121:212','1212:1212e:rdsf');
+        drupal_set_message("from session");
+        $pids = $_SESSION['ir_bibliography_pids'];
+    }    
+    //drupal_set_message(print_r($pids));
+    if (count($pids) > 0) {
+        foreach($pids as $key => $value) {
+            $options[$key] = "";
+            $form[$key]['pid'] = array('#value' => stripslashes($pids[$key]));
+            $form[$key]['title'] = array('#value' => l(t("title link to object "),'http://google.ca'));
+            $form[$key]['abstract'] = array('#value' => stripslashes("abstract"));
+            $status[$key] = "";
+            //$form[$key] = $data->pid;
+            
+        }
+    }
+    drupal_set_message(print_r($pids));
 
-	$form['citation_check'] = array(
-            '#type' => 'checkboxes',
-            '#options' => $options,
-            '#default_value' => $status,
-	);
+    $form['#tree'] == TRUE;
 
-        $form['citation_action'] = array(
-            '#type' => 'select',
-            '#title' => t('With Checked'),
-            '#options' => array(NULL => "Select...", "Remove","Export"),
-            '#required' => TRUE,
-        ); //$form['citation_alter'] = array
-        
-        $form['citation_pids'] = array(
-            '#type' => 'hidden',
-            '#default_value' => $pids,
-        ); //$form['citation_pids'] = array
+    $form['citation_pids'] = array(
+        '#type' => 'hidden',
+        '#value' => '',
+    );
 
-	$form['submit'] = array(
-            '#type' => 'submit',
-            '#value' => t('Submit'),
-	);
+    $form['citation_check'] = array(
+        '#type' => 'checkboxes',
+        '#options' => $options,
+        '#default_value' => $status,
+    );
 
-	$form['cancel'] = array(
-            '#type' => 'markup',
-            '#value' => l(t('Cancel'), 'ir_bibliography'),
-	);
+    $form['citation_action'] = array(
+        '#type' => 'select',
+        '#title' => t('With Checked'),
+        '#options' => array(NULL => "Select...", "Remove","Export"),
+        '#required' => TRUE,
+    ); //$form['citation_alter'] = array
 
-	$form['#redirect'] = 'ir_bibliography';
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit'),
+    );
+
+    $form['cancel'] = array(
+        '#type' => 'markup',
+        '#value' => l(t('Cancel'), 'ir_bibliography'),
+    );
+
+    $form['#redirect'] = 'ir_bibliography';
 
     return $form;
 }
@@ -85,38 +104,48 @@ function ir_bibliography_form_submit($form_id, $form) {
 
 
     $selected_citations = array();
-
     foreach($citation_check as $key => $value) {
-        if ($value) {
-            $selected_citations[] = "'$value'";
-        }
+            if ($value) {
+                $selected_citations[] = "'$value'";
+            }
     }
 
-    if ($$citation_action == 0) {
-        if($user->uid){
-            $value_string = @implode(' OR pid = ', $selected_citations);
-            $query = "DELETE FROM {ir_bibliography} WHERE (pid = $value_string) AND uid = $user->uid;";
-            //drupal_set_message($query);
-            db_query($query);
+    if(count($selected_citations) > 0) {
+        //if items are selected
+        if ($citation_action == 0) {
+            if($user->uid){
+                $value_string = @implode(' OR pid = ', $selected_citations);
+                $query = "DELETE FROM {ir_bibliography} WHERE (pid = $value_string) AND uid = $user->uid;";
+                //drupal_set_message($query);
+                db_query($query);
+            }
+            else {
+            //code to delete saved citations from session (anonymous user)
+            }
+            drupal_set_message(t('Citation(s) removed successfully.'));
+        }
+        elseif($citation_action == 1) {
+            if($user->uid){
+                //code to export from DB
+            }
+            else {
+                //code to export from session
+            }
+            //code to export citations
+            drupal_set_message(t('Citation(s) exported successfully.'));
         }
         else {
-        //code to delete saved citations from session (anonymous user)
+            drupal_set_message(t('No action defined for selected citations.'));
         }
-        drupal_set_message(t('Citation(s) removed successfully.'));
-    }
+    }//if(count($selected_citations) > 0)
     else {
-        //code to export citations
+        //if no items are selected fire a message
+        drupal_set_message(t('No citation(s) were selected.'));
     }
 
+    
 
-
-    // Insert new featured products
-    if (count($selected_products)) {
-        $query = "INSERT INTO {product_featured}(productid) VALUES $value_string";
-        db_query($query);
-    }
-
-    drupal_set_message(t($citation_action));
+    
 }
 
 function ir_bibliography_theme() {
@@ -129,6 +158,7 @@ function theme_ir_bibliography_form($form) {
     $rows = array();
 	
     foreach (element_children($form) as $key) {
+        //drupal_set_message(count($form));
         $row = array();
 	if (isset($form[$key]['pid'])) {
             $row[] = array('data' => drupal_render($form[$key]['pid']));
@@ -136,11 +166,13 @@ function theme_ir_bibliography_form($form) {
             $row[] = array('data' => drupal_render($form[$key]['abstract']));
             $status = drupal_render($form['citation_check'][$key]);
             $row[] = array('data' => $status, 'class' => 'checkbox');
+            //drupal_set_message($status);
            
             $rows[] = $row;
 	}
     }
 	// Individual table headers.
+
 	$header = array();
 	
 	$header[] = t('PID');
