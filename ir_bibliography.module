@@ -44,10 +44,50 @@ function ir_bibliography_menu() {
   );
   return $items;
 }
+
+
+
+
+/**
+ * This function will search and verify the pid isn't already assiocated with the drupal user or user session
+ * @return TRUE if pid is found or FALSE if the pid isn't found
+ *
+ * @todo
+ *
+ */
+function ir_bibliography_pid_find($pid) {
+    global $user;
+    if($user->uid) {
+        $query = "SELECT pid FROM {ir_bibliography} WHERE pid = '$pid' AND uid = $user->uid;";
+        $rs = db_query($query);
+        if(db_result($rs)) {
+            return TRUE; //pid found
+        }
+        else {
+            return FALSE; //pid not found
+        }
+        
+    }
+    else {
+        //check in session for existing pids
+        $pids = $_SESSION['ir_bibliography_pids'];
+        if(!is_array($pids)) {
+            $pids = array();
+        }
+        if(in_array($pid, $pids)) {
+            return TRUE; //pid found
+        }
+        else {
+            return FALSE; //pid not found
+            
+        }
+    }
+}
+
 /**
  * This function will add a pid to the drupal user or the anonymous user session
  * it will also cross reference the session pids to the drupal user pids if the current user w/session logs in
- * @return echo
+ * @return link to button
  *
  * @todo
  * finish cross referensing
@@ -55,41 +95,62 @@ function ir_bibliography_menu() {
  * 
  */
 
-function ir_bibliography_add($pid = NULL, $button = FALSE) {
+function ir_bibliography_add($pid = NULL, $button = FALSE, $set_msg = TRUE) {
     global $user;
     if(is_null($pid) && isset($_SESSION['ir_bibliography_pids']) && $user->uid) {
         //cross refernce pids of session to pids of drupal user
         $pids = $_SESSION['ir_bibliography_pids'];
+        drupal_set_message('cross reference');
         foreach($pids as $key => $value) {
-            $query = "SELECT pid FROM {ir_bibliography} WHERE pid = '$value' AND uid = $user->uid;";
-            //drupal_set_message($query);
-            //add any missing pids to db from session
+            if(ir_bibliography_pid_find($value) == FALSE) {
+                //add any missing pids to db from session
+                ir_bibliography_add($value,FALSE,FALSE);
+            }
         }
+        //after all pids are moved from session, unset it so this wont be called again
+        unset($_SESSION['ir_bibliography_pids']);
     }   
     
     elseif(!is_null($pid)) {
         if ($button == FALSE) {
             if($user->uid) {
                 //code to add pid to db
-                $query = "INSERT INTO {ir_bibliography} (uid, pid) VALUES ($user->uid, '$pid');";
-                db_query($query);
-                drupal_set_message('cross reference');
+                //$query = "INSERT INTO {ir_bibliography} (uid, pid) VALUES ($user->uid, '$pid');";
+                //db_query($query);
+                
+                if(ir_bibliography_pid_find($pid) == FALSE) {
+                    $new_record = array(
+                        'uid' => $user->uid,
+                        'pid' => $pid
+                    );
+
+                    drupal_write_record('ir_bibliography', $new_record);
+                    if ($set_msg == TRUE) {
+                        drupal_set_message("Citation added successfully to bibliography");
+                    }
+                }
             }
             else {
                 //code to add pid to session
                 $pids = $_SESSION['ir_bibliography_pids'];
-                if(is_null(array_search($pid, $pids))) {//check to see if pid is already in session
+                
+                if(ir_bibliography_pid_find($pid) == FALSE) {                    
+                    ////check to see if pid is already in session
                     $pids[] = $pid;
-                }
-                //add pid to session
-                $_SESSION['ir_bibliography_pids'] = $pids;
-                //drupal_set_message("test".array_search($pid, $pids));
+                    //add pid to session
+                    $_SESSION['ir_bibliography_pids'] = $pids;
+                    if ($set_msg == TRUE) {
+                        drupal_set_message("Citation added successfully to bibliography");
+                    }
+                }         
+                
             }
-            drupal_set_message("Citation added successfully to bibliography");
         }
         else {
-            //check first to see if the pid is already in db or session before they can add it again
-            echo l("Add $pid to bibliography","http://google.ca");
+            if(ir_bibliography_pid_find($pid) == FALSE) {
+                //only see if pid doesn't exist in session or db
+                return l("Add $pid to bibliography","http://google.ca");
+            }
         }
         //add pid to session or drupal user
         //drupal_set_message('pid is NOT  null '.$pid);
@@ -102,19 +163,19 @@ function ir_bibliography_add($pid = NULL, $button = FALSE) {
  * @return array with form contents
  *
  * @todo
- *  build in functionality if anonymous user logs in, their session pids will be assiocated
- *  with their drupal account automatically
+ *  
  */
 function ir_bibliography_form() {
     global $user;
     module_load_include('inc', 'Fedora_Repository', 'api/fedora_item');
-    ir_bibliography_add();
-    ir_bibliography_add('gg',TRUE);
-    ir_bibliography_add("demo: " .rand());
+    //ir_bibliography_add();
+    //ir_bibliography_add('gg');
+    //ir_bibliography_add("demo: " .rand());
+    
     $pids = array();
     $options = array();
     if($user->uid){ //get pids assiocated with druapl user from drupal database
-        ir_bibliography_add(); //cross reference session logged in drupal user
+        ir_bibliography_add(); //cross reference session w/ logged in drupal user
         $query = "SELECT pid FROM {ir_bibliography} WHERE uid = $user->uid";
         $rs = db_query($query); 
         if ($rs) {
@@ -124,9 +185,6 @@ function ir_bibliography_form() {
 	}
     }
     else{//get pids from session
-        //unset($_SESSION['ir_bibliography_pids']);
-        //$_SESSION['ir_bibliography_pids'] = array('islandora:225', 'demo:5','demo:6');
-        
         $pids = $_SESSION['ir_bibliography_pids'];
     }    
     
@@ -155,8 +213,6 @@ function ir_bibliography_form() {
             $form['table'][$i]['pid'] = array('#value' => stripslashes($pid));
             $form['table'][$i]['title'] = array('#value' => $title);
             $form['table'][$i]['author'] = array('#value' => $author);
-            //$status[$key] = "";
-            //$form[$key] = $data->pid;
             $options[$pid] = "";
             $form['table'][$i]['_pid'] = array('#value' => $pid);
             
@@ -247,13 +303,13 @@ function ir_bibliography_form_submit($form_id, $form) {
                 $value_string = @implode(' OR pid = ', $selected_citations);
                 $query = "DELETE FROM {ir_bibliography} WHERE (pid = $value_string) AND uid = $user->uid;";
                 db_query($query);
-                drupal_set_message($query);
+                //drupal_set_message($query);
             }
             else {
             //code to delete saved citations from session (anonymous user)
             $pids = $_SESSION['ir_bibliography_pids'];
             foreach($selected_citations as $key => $value) {
-                drupal_set_message("value".$value);
+                //drupal_set_message("value".$value);
                 $remove_key = array_search($value, $pids);
                 unset($pids[$remove_key]);
 
