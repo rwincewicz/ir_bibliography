@@ -1,0 +1,106 @@
+<?php
+
+// $Id$
+
+/**
+ * @file
+ *
+ */
+
+/**
+ * Implementation of hook_install.
+ */
+function islandora_bookmark_install() {
+
+    drupal_install_schema('islandora_bookmark');
+
+    $new_record = array(
+        'folder_id' => 1,
+        'folder_name' => 'Favorites',
+        'created' => time()
+    );
+    drupal_write_record('islandora_bookmark_folders', $new_record);
+}
+
+/**
+ * Implementation of hook_uninstall.
+ */
+function islandora_bookmark_uninstall() {
+  drupal_uninstall_schema('islandora_bookmark');
+}
+
+/**
+ * Implementation of hook_schema()
+ * @return array of Schema API table definitions.
+ */
+function islandora_bookmark_schema() {
+  $schema['islandora_bookmark_pids'] = array(
+    'description' => t('This table is used to store the pid and uid of the objects a Druapl user has selected.'),
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => t('uid of the Drupal user.'),
+        'type' => 'int',
+        'length' =>10,
+        'not null' => TRUE,
+      ),
+        'pid' => array(
+        'description' => t('pid of the Fedora object'),
+        'type' => 'varchar',
+        'length' =>64,
+        'not null' => TRUE,
+      ),
+        'folder_id' => array(
+        'description' => t('id of parent folder'),
+        'type' => 'int',
+        'length' =>10,
+        'not null' => TRUE,
+      ),
+        'created' => array(
+        'description' => t('timestamp of when the pid was added'),
+        'type' => 'int',
+        'length' =>11,
+        'default' => 0,
+        'not null' => TRUE,
+      ),
+      
+    ),
+    'primary key' => array('id'),
+    'unique keys' => array('uid' => array('pid', 'uid','folder_id')),
+
+  );
+
+
+
+  $schema['islandora_bookmark_folders'] = array(
+    'description' => t('This table is used to store folders that contain the pids. eg: folder of citations, folder of images for slide show'),
+    'fields' => array(
+      'folder_id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'folder_name' => array(
+        'description' => t('Name of the folder assigned by the module using islandora_bookmark'),
+        'type' => 'varchar',
+        'length' =>30,
+        'not null' => TRUE,
+      ),
+        
+        'created' => array(
+        'description' => t('timestamp of when the folder was added'),
+        'type' => 'int',
+        'length' =>11,
+        'default' => 0,
+        'not null' => TRUE,
+      ),
+
+    ),
+    'primary key' => array('folder_id'),
+    'unique keys' => array('folder_name' => array('folder_name')),
+
+  );
+  return $schema;
+}
