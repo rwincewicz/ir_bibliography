@@ -13,13 +13,8 @@
 function islandora_bookmark_install() {
 
     drupal_install_schema('islandora_bookmark');
-
-    $new_record = array(
-        'folder_id' => 1,
-        'folder_name' => 'Favorites',
-        'created' => time()
-    );
-    drupal_write_record('islandora_bookmark_folders', $new_record);
+    islandora_bookmark_folder_add('Favorites'); //default folder
+    //islandora_bookmark_folder_add('Citations'); move this to the scholar or ir_ciation module
 }
 
 /**

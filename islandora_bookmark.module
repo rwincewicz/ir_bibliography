@@ -11,7 +11,7 @@
 define("PERM_ISLANDORA_BOOKMARK_CREATE", 'create ir bibliography');
 define('MENU_ISLANDORA_BOOKMARK', 'islandora_bookmark');
 
-module_load_include('module', 'scholar');
+//module_load_include('module', 'scholar');
 
 /**
 * Valid permissions for this module
@@ -121,75 +121,7 @@ function islandora_bookmark_pid_folder_find($pid = NULL, $folder = NULL) {
     return $pid_folder_find;
 }
 
-/**
- * This function will add a pid to the drupal user or the anonymous user session
- * it will also cross reference the session pids to the drupal user pids if the current user w/session logs in
- *
- * @param string $pid
- * @param boolean $set_msg - drupal set message, when cross referening session / drupal db
- *
- * @todo
- * add functionality to accept an array of pids so the function
- * doesnt need to be called for a large list of pids
- * 
- * @return 
- */
-function islandora_bookmark_add($pid = NULL, $folder_name = NULL, $set_msg = TRUE) {
-    global $user;
-    if(is_null($pid) && isset($_SESSION['islandora_bookmark_pids']) && $user->uid) {
-        //cross refernce pids of session to pids of drupal user
-        $pids = $_SESSION['islandora_bookmark_pids'];
-        drupal_set_message('cross reference');
-        foreach($pids as $key => $value) {
-            if(islandora_bookmark_pid_folder_find($value, $folder_name) == FALSE) {
-                //add any missing pids to db from session
-                islandora_bookmark_add($value, $folder_name, FALSE);
-            }
-        }
-        //after all pids are moved from session, unset it so this wont be called again
-        unset($_SESSION['islandora_bookmark_pids']);
-    }   
-    
-    elseif(!is_null($pid)) {
-        if(!is_array($pid)) {
-            //add functionality to accept an array of pids so the function
-            //doesnt need to be called for a large list of pids
-        }
-        if($user->uid) {
-            
-            if(islandora_bookmark_pid_folder_find($pid, $folder) == FALSE) {
-                $new_record = array(
-                    'uid' => $user->uid,
-                    'pid' => $pid,
-                    'folder_id' => $folder,
-                    'created' => time()
-                );
-                drupal_write_record('islandora_bookmark_pids', $new_record);
-                if ($set_msg == TRUE) {
-                    drupal_set_message("Bookmark added successfully");
-                }
-            }
-            
-        }
-        else {
-            //code to add pid to session
-            $pids = $_SESSION['islandora_bookmark_pids'];
-            if(islandora_bookmark_pid_folder_find($pid) == FALSE) {
-                $pid_info['pid'] = $pid;
-                $pid_info['folder'] = $folder;
-                $pid_info['created'] = time();
 
-                 $pids[] = $pid_info;
-                $_SESSION['islandora_bookmark_pids'] = $pids;
-                if ($set_msg == TRUE) {
-                    drupal_set_message("Bookmark added successfully");
-                }
-                
-            }
-           //unset ($_SESSION['islandora_bookmark_pids']);
-        }
-    }
-}
 
 
 /**
@@ -205,10 +137,10 @@ function islandora_bookmark_list_form() {
     module_load_include('inc', 'Fedora_Repository', 'api/fedora_item');
     //islandora_bookmark_add('demo'. rand());
     //islandora_bookmark_add(array('ff','fffffff','fffffdfdf', 'dfsdfsdsdf'));
-    islandora_bookmark_add('demo162756190445',1);
-    islandora_bookmark_add('demo162756190445'.rand(),1);
+   // islandora_bookmark_add('demo162756190445',2);
+   // islandora_bookmark_add('demo'.rand(),1);
     //islandora_bookmark_folder_delete('Favorites');
-    islandora_bookmark_folder_add('Favorites');
+    //islandora_bookmark_folder_add('Favorites');
 
     
    
@@ -218,7 +150,7 @@ function islandora_bookmark_list_form() {
     if($user->uid){ //get pids assiocated with druapl user from drupal database
         islandora_bookmark_add(); //cross reference session w/ logged in drupal user
         //$query = "SELECT pid, created FROM {islandora_bookmark_pids} WHERE folder_id = $folder AND uid = $user->uid";
-        $query = "SELECT pid, created FROM {islandora_bookmark_pids} WHERE uid = $user->uid";
+        $query = "SELECT pid, created, folder_id FROM {islandora_bookmark_pids} WHERE uid = $user->uid";
         $rs = db_query($query);
         if ($rs) {
             $i=0;
@@ -226,7 +158,7 @@ function islandora_bookmark_list_form() {
 
                 $pids[$i]['pid'] = $data->pid;
                 $pids[$i]['created'] = $data->created;
-                $pids[$i]['folder'] = $data->folder_id;
+                $pids[$i]['folder_id'] = $data->folder_id;
                 $i++;
             }
 	}
@@ -234,11 +166,11 @@ function islandora_bookmark_list_form() {
     else{//get pids from session
         $pids = $_SESSION['islandora_bookmark_pids'];
     }    
-   // var_dump($pids);
+    //var_dump($pids);
     if (count($pids) > 0) {
         foreach($pids as $i => $pid) {
             $created = $pid['created'];
-            $folder = $pid['folder'];
+            $folder_id = $pid['folder_id'];
             
             $pid = $pid['pid'];
             
@@ -274,6 +206,11 @@ function islandora_bookmark_list_form() {
     
 
     $form['#tree'] == TRUE;
+
+    $form['folder_id'] = array(
+        '#type' => 'hidden',
+        '#value' => 1, //hard coded to show only pids in folder 1
+    );
 
     $form['bookmark_check'] = array(
         '#type' => 'checkboxes',
@@ -343,6 +280,7 @@ function islandora_bookmark_list_form_submit($form_id, $form) {
     $form_values = $form['values'];
     $bookmark_check = $form_values['bookmark_check'];
     $bookmark_action = $form_values['bookmark_action'];
+    $folder_id = $form_values['folder_id'];
 
 
     $selected_bookmarks = array();
@@ -355,38 +293,11 @@ function islandora_bookmark_list_form_submit($form_id, $form) {
     if(count($selected_bookmarks) > 0) {
         //if items are selected
         if ($bookmark_action == 0) {//code to remove bookmark from module
-            if($user->uid){
-                foreach($selected_bookmarks as $key => $value) {
-                    $selected_bookmarks[$key] = "'$value'";
-                }
-                $value_string = @implode(' OR pid = ', $selected_bookmarks);
-                $query = "DELETE FROM {islandora_bookmark_pids} WHERE (pid = $value_string) AND uid = $user->uid;";
-                db_query($query);
-                //drupal_set_message($query);
-                drupal_set_message(t('Bookmark(s) removed successfully.'));
-            }
-            else {
-            //code to delete saved citations from session (anonymous user)
-            $pids = $_SESSION['islandora_bookmark_pids'];
-            foreach($selected_bookmarks as $key => $value) {
-                //drupal_set_message("value".$value);
-                $remove_key = array_search($value, $pids);
-                unset($pids[$remove_key]);
-
-            }
-
-            $_SESSION['islandora_bookmark_pids'] = array_values($pids);
-            drupal_set_message(t('Bookmark(s) removed successfully.'));
+            islandora_bookmark_delete($selected_bookmarks, $folder_id);
         }
-            }
         elseif($bookmark_action == 1) { //code to export bookmarks
-            if($user->uid){
-                //code to export from DB
-            }
-            else {
-                //code to export from session
-            }
-            //code to export bookmarks
+            //code to export bookmarks to ir_citation module
+            //set of sub modules for export actions?
             drupal_set_message(t('Bookmark(s) exported successfully.'));
         }
         else {
@@ -480,26 +391,133 @@ function theme_islandora_bookmark_list_form($form) {
        $output .= drupal_render($form['form_build_id']);
        $output .= drupal_render($form['form_token']);
        $output .= drupal_render($form['form_id']);
+       $output .= drupal_render($form['folder_id']);
        
 	return $output;
 }
 
 
+
+/**
+ * This function will add a pid to the drupal user or the anonymous user session
+ * it will also cross reference the session pids to the drupal user pids if the current user w/session logs in
+ *
+ * @param string $pid
+ * @param int $folder_id
+ * @param boolean $set_msg - drupal set message, when cross referening session / drupal db
+ *
+ * @todo
+ * add functionality to accept an array of pids so the function
+ * doesnt need to be called for a large list of pids
+ *
+ * @return
+ */
+function islandora_bookmark_add($pid = NULL, $folder_id = NULL, $set_msg = TRUE) {
+    global $user;
+    //cross refernce pids of session to pids of drupal user
+    if(is_null($pid) && isset($_SESSION['islandora_bookmark_pids']) && $user->uid) {        
+        $pids = $_SESSION['islandora_bookmark_pids'];
+        drupal_set_message('cross reference');
+        foreach($pids as $key => $value) {
+            if(islandora_bookmark_pid_folder_find($value, array('id' => $folder_id)) == FALSE) {
+                //add any missing pids to db from session
+                islandora_bookmark_add($value, $folder_id, FALSE);
+            }
+        }
+        //after all pids are moved from session, unset it so this wont be called again
+        unset($_SESSION['islandora_bookmark_pids']);
+    }
+    //add to DB
+    elseif(!is_null($pid)) {
+        if(!is_array($pid)) {
+            //add functionality to accept an array of pids so the function
+            //doesnt need to be called for a large list of pids
+        }
+        if($user->uid) {
+
+            if(islandora_bookmark_pid_folder_find($pid, array('id' => $folder_id)) == FALSE) {
+                $new_record = array(
+                    'uid' => $user->uid,
+                    'pid' => $pid,
+                    'folder_id' => $folder_id,
+                    'created' => time()
+                );
+                drupal_write_record('islandora_bookmark_pids', $new_record);
+                if ($set_msg == TRUE) {
+                    drupal_set_message("Bookmark added successfully");
+                }
+            }
+
+        }
+        //code to add pid to session
+        else {
+            
+            $pids = $_SESSION['islandora_bookmark_pids'];
+            if(islandora_bookmark_pid_folder_find($pid, array('id' => $folder_id)) == FALSE) {
+                $pid_info['pid'] = $pid;
+                $pid_info['folder_id'] = $folder_id;
+                $pid_info['created'] = time();
+
+                 $pids[] = $pid_info;
+                $_SESSION['islandora_bookmark_pids'] = $pids;
+                if ($set_msg == TRUE) {
+                    drupal_set_message("Bookmark added successfully");
+                }
+
+            }
+            //unset ($_SESSION['islandora_bookmark_pids']);
+        }
+    }
+}
+
 /**
  * This function allows a user to delete a pid from a folder
  *
- * @param $pid, $folder_id
+ * @param array $pids, int $folder_id
  *
  * @todo
+ * use this function to replace the above code in the form_submit function
+ * add in functionality to remove pid from session
+ *
  *
  *
  * @return
  *
  */
 
-function islandora_bookmark_delete($pid, $folder_id) {
-    $query = "DELETE FROM {islandora_bookmark_pids} WHERE pid = $pid AND folder_id = $folder_id";
-    db_query($query);
+function islandora_bookmark_delete($pids, $folder_id) {
+    global $user;
+    //delete from DB
+    if($user->uid){
+        foreach($pids as $key => $value) {
+            $pids[$key] = "'$value'";
+        }
+        $value_string = @implode(' OR pid = ', $pids);
+        $query = "DELETE FROM {islandora_bookmark_pids} WHERE (pid = $value_string) AND folder_id = $folder_id AND uid = $user->uid;";
+        db_query($query);
+        //drupal_set_message($query);
+        drupal_set_message(t('Bookmark(s) removed successfully.'));
+    }
+    //delete from session
+    else {
+        $_pids = $_SESSION['islandora_bookmark_pids'];
+        $tt = $_pids[1];
+        $gg = $tt['folder_id'];
+       // var_dump($tt);
+
+        foreach($pids as $key => $value) {
+            
+            $remove_key = array_search($value, $_pids);
+            $_key = $_pids[$remove_key];
+            $_folder_id = $_key['folder_id'];
+            if($_folder_id == $folder_id) {
+                unset($_pids[$remove_key]);
+            }
+        }
+
+        $_SESSION['islandora_bookmark_pids'] = array_values($_pids);
+        drupal_set_message(t('Bookmark(s) removed successfully.'));
+    }
 }
 
 
@@ -509,6 +527,7 @@ function islandora_bookmark_delete($pid, $folder_id) {
  * @param $folder_name
  *
  * @todo
+ *
  *
  *
  * @return
@@ -529,7 +548,7 @@ function islandora_bookmark_folder_add($folder_name) {
 /**
  * This function deletes a folder
  *
- * @param $folder
+ * @param array $folder (id => folder_id, name => folder_name)
  *
  * @todo
  *
@@ -538,9 +557,19 @@ function islandora_bookmark_folder_add($folder_name) {
  *
  */
 
-function islandora_bookmark_folder_delete($folder_name) {
-
-    $query = "DELETE FROM {islandora_bookmark_folders} WHERE folder_name = '$folder_name'";
-    db_query($query);
-
+function islandora_bookmark_folder_delete($folder) {
+    if(is_array($folder)) {
+        $folder_id = $folder['id'];
+        $folder_name = $folder['name'];
+        if(!$folder_id) {
+            $query = "DELETE FROM {islandora_bookmark_folders} WHERE folder_id = $folder_id";
+            db_query($query);
+            drupal_set_message('Folder deleted successfully');
+        }
+        elseif(!$folder_name) {
+            $query = "DELETE FROM {islandora_bookmark_folders} WHERE folder_name = '$folder_name'";
+            db_query($query);
+            drupal_set_message('Folder deleted successfully');
+        }
+    }
 }
