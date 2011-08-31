@@ -7,6 +7,8 @@
  *
  */
 
+include_once 'islandora_bookmark.module';
+
 /**
  * Implementation of hook_install.
  */
@@ -67,8 +69,6 @@ function islandora_bookmark_schema() {
     'unique keys' => array('uid' => array('pid', 'uid','folder_id')),
 
   );
-
-
 
   $schema['islandora_bookmark_folders'] = array(
     'description' => t('This table is used to store folders that contain the pids. eg: folder of citations, folder of images for slide show'),
