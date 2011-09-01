@@ -641,20 +641,6 @@ function islandora_bookmark_folder_delete($folder) {
   }
 }
 
-function islandora_bookmark_form_alter(&$form, &$form_state, $form_id) {
-  switch ($form_id) {
-    case 'add_stream_form':
-      $form['export'] = array(
-        '#type' => 'button',
-        '#value' => t('Test'),
-        '#prefix' => '<div id="content-fedora">',
-        '#suffix' => '</div>',
-      );
-
-      break;
-  }
-}
-
 /**
  * Allows searching for a value in a multidimensional array
  * @param type $haystack

@@ -1,0 +1,3 @@
+This is a drupal module which allows the user to create and manage a collection of PIDs.
+
+The module will also allow the user to group these collections together based on the content type. This will then allow the collections to be exported to another module to create an aggregate file such as a formatted citation list, slide show or compressed binaries.
