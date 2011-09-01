@@ -1,7 +1,5 @@
 <?php
 
-// $Id$
-
 /**
  * @file
  *
@@ -41,32 +39,32 @@ function islandora_bookmark_schema() {
       'uid' => array(
         'description' => t('uid of the Drupal user.'),
         'type' => 'int',
-        'length' =>10,
+        'length' => 10,
         'not null' => TRUE,
       ),
         'pid' => array(
         'description' => t('pid of the Fedora object'),
         'type' => 'varchar',
-        'length' =>64,
+        'length' => 64,
         'not null' => TRUE,
       ),
         'folder_id' => array(
         'description' => t('id of parent folder'),
         'type' => 'int',
-        'length' =>10,
+        'length' => 10,
         'not null' => TRUE,
       ),
         'created' => array(
         'description' => t('timestamp of when the pid was added'),
         'type' => 'int',
-        'length' =>11,
+        'length' => 11,
         'default' => 0,
         'not null' => TRUE,
       ),
       
     ),
     'primary key' => array('id'),
-    'unique keys' => array('uid' => array('pid', 'uid','folder_id')),
+    'unique keys' => array('uid' => array('pid', 'uid', 'folder_id')),
 
   );
 
@@ -80,14 +78,14 @@ function islandora_bookmark_schema() {
       'folder_name' => array(
         'description' => t('Name of the folder assigned by the module using islandora_bookmark'),
         'type' => 'varchar',
-        'length' =>30,
+        'length' => 30,
         'not null' => TRUE,
       ),
         
         'created' => array(
         'description' => t('timestamp of when the folder was added'),
         'type' => 'int',
-        'length' =>11,
+        'length' => 11,
         'default' => 0,
         'not null' => TRUE,
       ),
