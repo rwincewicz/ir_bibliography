@@ -9,8 +9,12 @@
 define("PERM_ISLANDORA_BOOKMARK_CREATE", 'create ir bibliography');
 define('MENU_ISLANDORA_BOOKMARK', 'islandora_bookmark');
 define('MENU_ISLANDORA_BOOKMARK_ADD', 'islandora_bookmark_add');
+define('MENU_ISLANDORA_BOOKMARK_EXPORT', 'islandora_bookmark_export');
+define('MENU_ISLANDORA_BOOKMARK_CITATION', 'islandora_bookmark_citation');
+define('MENU_ISLANDORA_BOOKMARK_CITATION_DISPLAY', 'islandora_bookmark_citation_display');
 
 module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+module_load_include('inc', 'ir_citation', 'ir_citation.api');
 
 /**
  * Valid permissions for this module
@@ -43,6 +47,30 @@ function islandora_bookmark_menu() {
     'access arguments' => array(PERM_ISLANDORA_BOOKMARK_CREATE),
   );
 
+  $items[MENU_ISLANDORA_BOOKMARK_EXPORT] = array(
+    'title' => t('Islandora Bookmark Export'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_bookmark_export_form'),
+    'type' => MENU_CALLBACK, //MENU_CALLBACK,
+    'access arguments' => array(PERM_ISLANDORA_BOOKMARK_CREATE),
+  );
+
+  $items[MENU_ISLANDORA_BOOKMARK_CITATION] = array(
+    'title' => t('Islandora Bookmark Citations'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_bookmark_citation_form'),
+    'type' => MENU_CALLBACK, //MENU_CALLBACK,
+    'access arguments' => array(PERM_ISLANDORA_BOOKMARK_CREATE),
+  );
+  
+  $items[MENU_ISLANDORA_BOOKMARK_CITATION_DISPLAY] = array(
+    'title' => t('Islandora Bookmark Citations'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_bookmark_citation_display_form'),
+    'type' => MENU_CALLBACK, //MENU_CALLBACK,
+    'access arguments' => array(PERM_ISLANDORA_BOOKMARK_CREATE),
+  );
+  
   return $items;
 }
 
@@ -56,11 +84,11 @@ function islandora_bookmark_menu() {
  * @return drupal link function l()
  *
  */
-function islandora_bookmark_link() {
-  if (user_access(PERM_ISLANDORA_BOOKMARK_CREATE)) {
-    echo l('Your Bibliography', MENU_ISLANDORA_BOOKMARK);
-  }
-}
+//function islandora_bookmark_link() {
+//  if (user_access(PERM_ISLANDORA_BOOKMARK_CREATE)) {
+//    echo l('Your Bibliography', MENU_ISLANDORA_BOOKMARK);
+//  }
+//}
 
 /**
  * This function will search and verify the pid isn't already associated with the drupal user or user session
@@ -290,9 +318,12 @@ function islandora_bookmark_list_form_submit($form_id, $form) {
     if ($bookmark_action == 0) {//code to remove bookmark from module
       islandora_bookmark_delete($selected_bookmarks, $folder_id);
     }
-    elseif ($bookmark_action == 1) { //code to export bookmarks
-      //code to export bookmarks to ir_citation module
-      //set of sub modules for export actions?
+    elseif ($bookmark_action == 1) {
+
+      $_SESSION['islandora_export_pids'] = $selected_bookmarks;
+
+//      drupal_set_message(implode(' ', $selected_bookmarks));
+      drupal_goto('islandora_bookmark_export');
       drupal_set_message(t('Bookmark(s) exported successfully.'));
     }
     else {
@@ -315,7 +346,7 @@ function islandora_bookmark_list_form_submit($form_id, $form) {
  */
 function islandora_bookmark_theme() {
   return array(
-    'islandora_bookmark_list_form' => array('arguments' => array('form' => NULL), ),
+    'islandora_bookmark_list_form' => array('arguments' => array('form' => NULL),),
   );
 }
 
@@ -641,6 +672,213 @@ function islandora_bookmark_folder_delete($folder) {
   }
 }
 
+function islandora_bookmark_export_form($form) {
+  $form = array();
+
+  $pids = $_SESSION['islandora_export_pids'];
+
+//  var_dump($pids);
+
+  $form['set1'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Export bookmarks'),
+  );
+
+  $form['set1']['pids'] = array(
+    '#value' => t('PIDs selected: ') . implode(', ', $pids),
+  );
+
+  $form['set1']['options'] = array(
+    '#type' => 'radios',
+    '#title' => t('Export options'),
+    '#default_value' => 0,
+    '#options' => array(t('List of PIDs - text'), t('List of PIDs - XML'), t('Citations'), t('Plain text'), t('Binaries')),
+  );
+
+  $form['pids'] = array(
+    '#type' => 'value',
+    '#value' => $pids,
+  );
+
+  $form['export'] = array(
+    '#type' => 'submit',
+    '#value' => t('Export'),
+  );
+
+  return $form;
+}
+
+function islandora_bookmark_export_form_validate($form, &$form_state) {
+  if ($form_state['values']['pids'] == NULL) {
+    form_set_error('text', t('No pids selected!'));
+  }
+}
+
+function islandora_bookmark_export_form_submit($form, &$form_state) {
+  drupal_set_message();
+//  drupal_set_message(t('Bookmarks exported successfully'), 'status', FALSE);
+//  drupal_set_message(implode(', ', $form_state['values']['pids']), 'status', FALSE);
+//  var_dump($form_state);
+
+   $pids = $form_state['values']['pids'];
+  
+  switch ($form_state['values']['options']) {
+    case 0:
+    $filename = 'pids.txt';
+
+    header('Content-Type', 'text/plain');
+    header('Content-Disposition: attachment; filename=' . $filename . ';');
+
+    foreach ($pids as $pid) {
+      print($pid);
+      print("\n");
+    }
+//    drupal_set_message(implode(', ', $pids));
+
+    exit;
+    break;
+    
+    case 1:
+      drupal_set_message(t('List of PIDs - XML'));
+      $filename = 'pids.xml';
+      
+      header('Content-Type', 'text/xml');
+      header('Content-Disposition: attachment; filename=' . $filename . ';');
+      
+      foreach ($pids as $pid) {
+      
+      $object = new Fedora_Item($pid);
+      $xml = $object->get_datastreams_list_as_SimpleXML();
+      print($xml->asXML());
+      exit;
+      }
+      break;
+    
+    case 2:
+      drupal_set_message(t('Export citations - text'));
+      
+      drupal_goto('islandora_bookmark_citation');
+      
+      break;
+    
+    case 3:
+      drupal_set_message(t('Export plain text'));
+      break;
+    
+    case 4:
+      drupal_set_message(t('Export binaries'));
+      
+      foreach ($pids as $pid) {
+      
+        $object = new Fedora_Item($pid);
+        $dsarray = $object->get_datastreams_list_as_array();
+        foreach ($dsarray as $dselement) {
+//          $ds = $object->get_mimetype_of_datastream($dselement);
+          drupal_set_message(implode(', ', $dselement));
+//          var_dump($dselement);
+        }
+//        drupal_set_message(implode(', ', $dsarray['OBJ']));
+//        var_dump($dsarray);
+      }
+      break;
+  }
+}
+
+function islandora_bookmark_citation_form($form) {
+ 
+  $pids = $_SESSION['islandora_export_pids'];
+  
+  $form = array();
+  
+  $form['set'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Citations'),
+  );
+  
+  $form['set']['pids'] = array(
+    '#value' => t('PIDs selected: ') . implode(', ', $pids),
+  );
+  
+  $form['set']['csl'] = array(
+    '#type' => 'radios',
+    '#title' => t('Citation style'),
+    '#default_value' => 0,
+    '#options' => array(t('csl1'), t('csl2'), t('csl3'), t('csl4'), t('csl5')),
+  );
+  
+  $form['pids'] = array(
+    '#type' => 'value',
+    '#value' => $pids,
+  );
+  
+  $form['export'] = array(
+    '#type' => 'submit',
+    '#value' => t('Create citations'),
+  );
+  
+  return $form;
+  
+}
+
+function islandora_bookmark_citation_form_validate($form, &$form_state) {
+  
+}
+
+function islandora_bookmark_citation_form_submit($form, &$form_state) {
+  
+  $csl = $form_state['values']['csl'];
+  
+  $_SESSION['islandora_citation_csl'] = $csl;
+  
+  drupal_goto('islandora_bookmark_citation_display');
+  
+}
+
+function islandora_bookmark_citation_display_form($form) {
+  
+  $pids = $_SESSION['islandora_export_pids'];
+  
+  $csl = $_SESSION['islandora_citation_csl'];
+  
+  $form['set'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Citations'),
+  );
+  
+  $form['set']['pids'] = array(
+    '#value' => t('PIDs selected: ') . implode(', ', $pids) . '</BR>',
+  );
+  
+  $form['set']['csl'] = array(
+    '#value' => t('CSL selected: ') . $csl,
+  );
+  
+  $form['options'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Options'),
+    '#options' => array(
+      'print' => t('Print'),
+      'email' => t('Email'),
+    ),
+  );
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+  
+  return $form;
+  
+}
+
+function islandora_bookmark_citation_display_form_validate($form, &$form_state) {
+  
+}
+
+function islandora_bookmark_citation_display_form_submit($form, &$form_state) {
+  
+}
+
 /**
  * Allows searching for a value in a multidimensional array
  * @param type $haystack
@@ -659,5 +897,5 @@ function recursiveArraySearch($haystack, $needle, $index = NULL) {
     $it->next();
   }
   return FALSE;
-} 
+}
 
