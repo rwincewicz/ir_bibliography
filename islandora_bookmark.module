@@ -15,6 +15,7 @@ define('MENU_ISLANDORA_BOOKMARK_CITATION_DISPLAY', 'islandora_bookmark_citation_
 
 module_load_include('inc', 'fedora_repository', 'api/fedora_item');
 module_load_include('inc', 'ir_citation', 'ir_citation.api');
+module_load_include('inc', 'ir_citation', 'ir_citation');
 
 /**
  * Valid permissions for this module
@@ -70,26 +71,26 @@ function islandora_bookmark_menu() {
     'type' => MENU_CALLBACK, //MENU_CALLBACK,
     'access arguments' => array(PERM_ISLANDORA_BOOKMARK_CREATE),
   );
-  
+
   $items['admin/settings/islandora_bookmark'] = array(
-        'title' => t('Islandora bookmarks'),
-        'description' => t('Administer the Islandora bookmarks module'),
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('islandora_bookmark_admin'),
-        'access arguments' => array('administer site configuration'),
-        'type' => MENU_NORMAL_ITEM,
-    );
+    'title' => t('Islandora bookmarks'),
+    'description' => t('Administer the Islandora bookmarks module'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_bookmark_admin'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
 
   return $items;
 }
 
 function islandora_bookmark_admin() {
-  
+
   $form['set'] = array(
     '#type' => 'fieldset',
     '#title' => 'Citation styles',
   );
-  
+
   $form['set']['islandora_bookmark_path'] = array(
     '#type' => 'textfield',
     '#title' => 'Path',
@@ -98,8 +99,8 @@ function islandora_bookmark_admin() {
     '#maxlength' => 128,
     '#required' => TRUE,
   );
-  
-   return system_settings_form($form);
+
+  return system_settings_form($form);
 }
 
 /**
@@ -377,7 +378,7 @@ function islandora_bookmark_theme() {
     'islandora_bookmark_list_form' => array(
       'arguments' => array(
         'form' => NULL),
-      ),
+    ),
   );
 }
 
@@ -768,7 +769,7 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
         print($pid);
         print("\n");
       }
-      
+
       exit;
       break;
 
@@ -856,7 +857,7 @@ function islandora_bookmark_citation_form($form) {
     $form['set']['csl'] = array(
       '#type' => 'radios',
       '#title' => t('Citation style'),
-      '#default_value' => 0,
+      '#default_value' => 'bibtex.csl',
       '#options' => $csl_titles,
     );
   }
@@ -903,19 +904,27 @@ function islandora_bookmark_citation_display_form() {
 
   $csl = $_SESSION['islandora_citation_csl'];
 
-//  var_dump($_SESSION);
+  $csl_file = file_get_contents('/var/www/drupal/sites/all/modules/ir_bibliography/csl/' . $csl);
+
+  if ($csl_file == FALSE) {
+    drupal_set_message(t('CSL load failed!'), 'warning');
+  }
+
+  $citation = new IslandoraCitationAPI();
+
+  $citation->loadCiteprocJavascript();
+
+  $citation->addENUS();
+
+  $html = $citation->getCitationHTMLFromPIDAndCSL($csl_file, $pids);
 
   $form['set'] = array(
     '#type' => 'fieldset',
     '#title' => t('Citations'),
   );
 
-  $form['set']['pids'] = array(
-    '#value' => t('PIDs selected: ') . implode(', ', $pids) . '</BR>',
-  );
-
-  $form['set']['csl'] = array(
-    '#value' => t('CSL selected: ') . $csl,
+  $form['set']['html'] = array(
+    '#value' => $html,
   );
 
   $form['options'] = array(
@@ -987,10 +996,10 @@ function islandora_bookmark_csl_name($item) {
   $file->load(variable_get('islandora_bookmark_path', '/var/www/drupal/sites/all/modules/ir_bibliography') . '/' . $item);
   $title = $file->getElementsByTagName('title');
   if ($title->item(0)->nodeValue != NULL) {
-  $array = array(
-    'filename' => $item,
-    'title' => $title->item(0)->nodeValue,
-  );
+    $array = array(
+      'filename' => $item,
+      'title' => $title->item(0)->nodeValue,
+    );
   }
   else {
     $array = array(
