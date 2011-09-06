@@ -374,7 +374,10 @@ function islandora_bookmark_list_form_submit($form_id, $form) {
  */
 function islandora_bookmark_theme() {
   return array(
-    'islandora_bookmark_list_form' => array('arguments' => array('form' => NULL),),
+    'islandora_bookmark_list_form' => array(
+      'arguments' => array(
+        'form' => NULL),
+      ),
   );
 }
 
@@ -531,9 +534,8 @@ function islandora_bookmark_add_form_submit($form, &$form_state) {
  *
  * @return
  */
-function islandora_bookmark_add($pid = NULL, $folder_id = NULL, $set_msg = TRUE) {
+function islandora_bookmark_add($pid = NULL, $folder_id = '1', $set_msg = TRUE) {
   global $user;
-  $folder_id = '1'; // Hard coded folder_id at the moment until there's a mechanism for creating them sensibly 
   //cross refernce pids of session to pids of drupal user
   if (is_null($pid) && isset($_SESSION['islandora_bookmark_pids']) && $user->uid) {
     $pids = $_SESSION['islandora_bookmark_pids'];
@@ -654,7 +656,7 @@ function islandora_bookmark_delete($pids, $folder_id) {
  *
  * @param $folder_name
  *
- * @todo
+ * @todo Add ability to add folder as a number as well. 
  *
  *
  *
@@ -704,27 +706,26 @@ function islandora_bookmark_folder_delete($folder) {
  * This form lists the options available for the listed pids
  * @param type $form
  * @return string 
- * 
  * @todo Have this as a basic form and allow the output submodules to
  * add options using hook_form_alter
  */
 function islandora_bookmark_export_form($form) {
   $form = array();
-
+//  Save the list of pids in the session so that they persist between forms
   $pids = $_SESSION['islandora_export_pids'];
 
 //  var_dump($pids);
 
-  $form['set1'] = array(
+  $form['set'] = array(
     '#type' => 'fieldset',
     '#title' => t('Export bookmarks'),
   );
 
-  $form['set1']['pids'] = array(
+  $form['set']['pids'] = array(
     '#value' => t('PIDs selected: ') . implode(', ', $pids),
   );
 
-  $form['set1']['options'] = array(
+  $form['set']['options'] = array(
     '#type' => 'radios',
     '#title' => t('Export options'),
     '#default_value' => 0,
@@ -746,15 +747,13 @@ function islandora_bookmark_export_form($form) {
 
 function islandora_bookmark_export_form_validate($form, &$form_state) {
   if ($form_state['values']['pids'] == NULL) {
+//    Check that there are pids listed as this page could be accessed directly with its URL
     form_set_error('text', t('No pids selected!'));
   }
 }
 
 function islandora_bookmark_export_form_submit($form, &$form_state) {
   drupal_set_message();
-//  drupal_set_message(t('Bookmarks exported successfully'), 'status', FALSE);
-//  drupal_set_message(implode(', ', $form_state['values']['pids']), 'status', FALSE);
-//  var_dump($form_state);
 
   $pids = $form_state['values']['pids'];
 
@@ -769,8 +768,7 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
         print($pid);
         print("\n");
       }
-//    drupal_set_message(implode(', ', $pids));
-
+      
       exit;
       break;
 
@@ -829,13 +827,13 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
 function islandora_bookmark_citation_form($form) {
 
   $pids = $_SESSION['islandora_export_pids'];
-
+//  Get the path to the csl files from the variable table
   $dir = variable_get('islandora_bookmark_path', 'var/www/drupal/sites/all/modules/ir_bibliography/csl');
-
+//  List the files from the directory, removing those that don't end in .csl
   $files = scandir($dir);
 
   $csl_files = array_filter($files, 'islandora_bookmark_filter_array');
-
+//  Edit the array to include both the csl title and filename
   $csl_array = array_map('islandora_bookmark_csl_name', $csl_files);
 
   foreach ($csl_array as $title) {
@@ -894,6 +892,11 @@ function islandora_bookmark_citation_form_submit($form, &$form_state) {
   drupal_goto('islandora_bookmark_citation_display');
 }
 
+/**
+ * Form to display the output from the citation API and display it
+ * @return string 
+ * @todo Add validate function to check that the pids and csl file exist
+ */
 function islandora_bookmark_citation_display_form() {
 
   $pids = $_SESSION['islandora_export_pids'];
@@ -962,8 +965,8 @@ function recursiveArraySearch($haystack, $needle, $index = NULL) {
 
 /**
  * This function is used to check the files array to see if the file has a .csl extension.
- * @param type $var
- * @return type boolean return TRUE if the extension is .csl, FALSE if it isn't
+ * @param type $var - filename to be checked
+ * @return type boolean - return TRUE if the extension is .csl, FALSE if it isn't
  */
 function islandora_bookmark_filter_array($var) {
   if (preg_match('/.\.csl$/', $var)) {
