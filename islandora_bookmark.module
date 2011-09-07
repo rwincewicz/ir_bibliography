@@ -14,9 +14,11 @@ define('MENU_ISLANDORA_BOOKMARK_CITATION', 'islandora_bookmark_citation');
 define('MENU_ISLANDORA_BOOKMARK_CITATION_DISPLAY', 'islandora_bookmark_citation_display');
 
 module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
 module_load_include('inc', 'ir_citation', 'ir_citation.api');
 module_load_include('inc', 'ir_citation', 'ir_citation');
 module_load_include('inc', 'islandora_fedora_api', 'islandora_fedora_api.object');
+module_load_include('inc', 'islandora_fedora_api', 'islandora_fedora_api.repository');
 
 /**
  * Valid permissions for this module
@@ -200,7 +202,15 @@ function islandora_bookmark_list_form() {
   module_load_include('inc', 'Fedora_Repository', 'api/fedora_item');
   $pids = array();
   $options = array();
-  if ($user->uid) { //get pids assiocated with druapl user from drupal database
+//  if (fedora_available() == FALSE) {
+//    var_dump(fedora_available());
+//    $form['message'] = array(
+//      '#value' => t('Fedora is not available!'),
+//    );
+//    drupal_set_message(t('Fedora is not available!' , 'error'));
+//    return $form;
+//  }
+  if ($user->uid) { //get pids assiocated with drupal user from drupal database
     islandora_bookmark_add(); //cross reference session w/ logged in drupal user
     //$query = "SELECT pid, created FROM {islandora_bookmark_pids} WHERE folder_id = $folder AND uid = $user->uid";
 //    $query = "SELECT pid, created, folder_id FROM {islandora_bookmark_pids} WHERE uid = '$user->uid'";
@@ -219,10 +229,6 @@ function islandora_bookmark_list_form() {
   else {//get pids from session
     $pids = $_SESSION['islandora_bookmark_pids'];
   }
-
-//  if (count($pids) < 1) {
-//    islandora_bookmark_add('demo' . rand(), 1);
-//  }
 //  var_dump($pids);
   if (count($pids) > 0) {
     foreach ($pids as $i => $pid) {
@@ -622,8 +628,6 @@ function islandora_bookmark_delete($pids, $folder_id) {
   //delete from DB
   if ($user->uid) {
     $pid = implode('\' OR pid = \'', $pids);
-//    $query = "DELETE FROM {islandora_bookmark_pids} WHERE (pid = '$pid') AND folder_id = '$folder_id' AND uid = '$user->uid';";
-//    drupal_set_message(check_plain($query));
     if (db_query("DELETE FROM {islandora_bookmark_pids} WHERE (pid = '%s') AND folder_id = '%d' AND uid = '%s';", $pid, $folder_id, $user->uid)) {
 
       drupal_set_message(t('Bookmark(s) removed successfully.'));
@@ -692,12 +696,10 @@ function islandora_bookmark_folder_delete($folder) {
     $folder_id = $folder['id'];
     $folder_name = $folder['name'];
     if (!$folder_id) {
-//      $query = "DELETE FROM {islandora_bookmark_folders} WHERE folder_id = '$folder_id'";
       db_query("DELETE FROM {islandora_bookmark_folders} WHERE folder_id = '%s'", $folder_id);
       drupal_set_message('Folder deleted successfully');
     }
     elseif (!$folder_name) {
-//      $query = "DELETE FROM {islandora_bookmark_folders} WHERE folder_name = '$folder_name'";
       db_query("DELETE FROM {islandora_bookmark_folders} WHERE folder_name = '%s'", $folder_name);
       drupal_set_message('Folder deleted successfully');
     }
@@ -715,8 +717,6 @@ function islandora_bookmark_export_form($form) {
   $form = array();
 //  Save the list of pids in the session so that they persist between forms
   $pids = $_SESSION['islandora_export_pids'];
-
-//  var_dump($pids);
 
   $form['set'] = array(
     '#type' => 'fieldset',
@@ -805,6 +805,9 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
 
     case 3:
       drupal_set_message(t('Export plain text'));
+      $object = new FedoraRepository();
+      $output = $object->fedoraWorking();
+      drupal_set_message($output);
       break;
 
     case 4:
@@ -817,7 +820,7 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
         foreach ($dsarray as $dselement) {
 //          $ds = $object->get_mimetype_of_datastream($dselement);
           $dselement_string = implode(', ', $dselement);
-          drupal_set_message($dselement_string);
+          drupal_set_message(t("@dselement_string", array('@dselement_string' => $dselement_string)));
 //          var_dump($dselement);
         }
 //        drupal_set_message(implode(', ', $dsarray['OBJ']));
@@ -1033,4 +1036,8 @@ function islandora_bookmark_csl_name($item) {
     );
   }
   return $array;
+}
+
+function islandora_bookmark_check_fedora() {
+  
 }
