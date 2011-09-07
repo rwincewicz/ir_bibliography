@@ -16,6 +16,7 @@ define('MENU_ISLANDORA_BOOKMARK_CITATION_DISPLAY', 'islandora_bookmark_citation_
 module_load_include('inc', 'fedora_repository', 'api/fedora_item');
 module_load_include('inc', 'ir_citation', 'ir_citation.api');
 module_load_include('inc', 'ir_citation', 'ir_citation');
+module_load_include('inc', 'islandora_fedora_api', 'islandora_fedora_api.object');
 
 /**
  * Valid permissions for this module
@@ -753,6 +754,12 @@ function islandora_bookmark_export_form_validate($form, &$form_state) {
   }
 }
 
+/**
+ * Submit function for the bookmark export form
+ * @param type $form
+ * @param type $form_state 
+ * @todo Allow the files to be downloaded, maybe as a zip archive
+ */
 function islandora_bookmark_export_form_submit($form, &$form_state) {
   drupal_set_message();
 
@@ -760,6 +767,7 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
 
   switch ($form_state['values']['options']) {
     case 0:
+//      Present the list of pids as a text file for download
       $filename = 'pids.txt';
 
       header('Content-Type', 'text/plain');
@@ -774,6 +782,7 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
       break;
 
     case 1:
+//      Present the list of pids as XML for download
       drupal_set_message(t('List of PIDs - XML'));
       $filename = 'pids.xml';
 
@@ -790,10 +799,8 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
       break;
 
     case 2:
-      drupal_set_message(t('Export citations - text'));
-
+//      Redirect to citation forms to export bibliography
       drupal_goto('islandora_bookmark_citation');
-
       break;
 
     case 3:
@@ -809,7 +816,8 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
         $dsarray = $object->get_datastreams_list_as_array();
         foreach ($dsarray as $dselement) {
 //          $ds = $object->get_mimetype_of_datastream($dselement);
-          drupal_set_message(implode(', ', $dselement));
+          $dselement_string = implode(', ', $dselement);
+          drupal_set_message($dselement_string);
 //          var_dump($dselement);
         }
 //        drupal_set_message(implode(', ', $dsarray['OBJ']));
@@ -836,6 +844,23 @@ function islandora_bookmark_citation_form($form) {
   $csl_files = array_filter($files, 'islandora_bookmark_filter_array');
 //  Edit the array to include both the csl title and filename
   $csl_array = array_map('islandora_bookmark_csl_name', $csl_files);
+//  Run through the array and check that each object has a MODS datastream.
+//  If it doesn't pull it out of the array. 
+  foreach ($pids as $key => $pid) {
+    $object = new Fedora_Item($pid);
+    $ds = $object->get_datastreams_list_as_array();
+    if (array_key_exists("MODS", $ds) == FALSE) {
+      unset($pids[$key]);
+      drupal_set_message($pid . t(' does not have a MODS datastream!'), 'warning');
+    }
+  }
+//  If there are no objects with MODS datastreams then report an error
+  if (count($pids) < 1) {
+    drupal_set_message(t('None of the pids selected have MODS datastreams!'), 'error');
+    return $form;
+  }
+//  Export the new list of pids to the session
+  $_SESSION['islandora_export_pids'] = $pids;
 
   foreach ($csl_array as $title) {
     $csl_titles[$title['filename']] = $title['title'];
