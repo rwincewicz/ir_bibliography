@@ -87,8 +87,27 @@ function islandora_bookmark_menu() {
   return $items;
 }
 
+/**
+ * Admin form for module where you can set the directory where the csl files are found
+ * Function checks that the directory exists
+ * @return type Admin form
+ * @todo Create ajax check for dir rather than using drupal_set_message
+ */
 function islandora_bookmark_admin() {
-
+// Clear previous messages which can get confusing
+// May clear other messages not related to the csl dir being present
+  drupal_get_messages();
+  
+  drupal_set_message(getcwd() . '/' . drupal_get_path('module', 'islandora_bookmark') . '/csl');
+  
+//  Check if the csl directory exists and show an error message if not
+   if (is_dir(variable_get('islandora_bookmark_path', drupal_get_path('module', 'islandora_bookmark') . '/csl'))) {
+//  drupal_set_message(t('Directory exists!'), 'status', FALSE);
+  }
+  else {
+    drupal_set_message(t('Directory does not exist!'), 'error', FALSE);
+  }
+  
   $form['set'] = array(
     '#type' => 'fieldset',
     '#title' => 'Citation styles',
@@ -845,7 +864,17 @@ function islandora_bookmark_citation_form($form) {
   $pids = $_SESSION['islandora_export_pids'];
 //  Get the path to the csl files from the variable table
   $dir = variable_get('islandora_bookmark_path', 'var/www/drupal/sites/all/modules/ir_bibliography/csl');
-//  List the files from the directory, removing those that don't end in .csl
+  
+  $form = array();
+
+  $form['set'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Citations'),
+  );
+  
+  if (is_dir($dir)) {
+    
+  //  List the files from the directory, removing those that don't end in .csl
   $files = scandir($dir);
 
   $csl_files = array_filter($files, 'islandora_bookmark_filter_array');
@@ -872,13 +901,6 @@ function islandora_bookmark_citation_form($form) {
   foreach ($csl_array as $title) {
     $csl_titles[$title['filename']] = $title['title'];
   }
-
-  $form = array();
-
-  $form['set'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Citations'),
-  );
 
   $form['set']['pids'] = array(
     '#value' => t('PIDs selected: ') . implode(', ', $pids) . '</BR>',
@@ -910,6 +932,11 @@ function islandora_bookmark_citation_form($form) {
   );
 
   return $form;
+  }
+  else {
+    drupal_set_message(t('Citation styles directory does not exist!'), 'error');
+    return $form;
+  }
 }
 
 function islandora_bookmark_citation_form_validate($form, &$form_state) {

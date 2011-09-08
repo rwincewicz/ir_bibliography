@@ -14,7 +14,7 @@ function islandora_bookmark_install() {
 
     drupal_install_schema('islandora_bookmark');
     islandora_bookmark_folder_add('Favorites'); //default folder
-    //islandora_bookmark_folder_add('Citations'); move this to the scholar or ir_ciation module
+    //islandora_bookmark_folder_add('Citations'); move this to the scholar or ir_citation module
 }
 
 /**
