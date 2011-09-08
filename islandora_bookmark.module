@@ -182,8 +182,10 @@ function islandora_bookmark_pid_folder_find($pid = NULL, $folder = NULL) {
 //    $query = "SELECT folder_name FROM {islandora_bookmark_folders} WHERE folder_name = '$folder_name'";
     $rs = db_query("SELECT folder_name FROM {islandora_bookmark_folders} WHERE folder_name = '%s'", $folder_name);
     $rsarray = db_fetch_array($rs);
-    if (Fedora_item::fedora_item_exists($rsarray['pid'])) {
-      $pid_folder_find = TRUE; //folder found
+    if ($rsarray) {
+      if (Fedora_item::fedora_item_exists($rsarray['pid'])) {
+        $pid_folder_find = TRUE; //folder found
+      }
     }
   }
   return $pid_folder_find;
