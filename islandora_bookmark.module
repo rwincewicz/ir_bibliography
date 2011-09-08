@@ -201,6 +201,7 @@ function islandora_bookmark_pid_folder_find($pid = NULL, $folder = NULL) {
  */
 function islandora_bookmark_list_form() {
   global $user;
+  $form = array();
   module_load_include('inc', 'Fedora_Repository', 'api/fedora_item');
   $pids = array();
   $options = array();
@@ -269,7 +270,7 @@ function islandora_bookmark_list_form() {
   }
   //drupal_set_message(print_r($pids));
 
-  $form['#tree'] == TRUE;
+  $form['#tree'] = TRUE;
 
   $form['folder_id'] = array(
     '#type' => 'hidden',
@@ -404,35 +405,36 @@ function islandora_bookmark_theme() {
  */
 function theme_islandora_bookmark_list_form($form) {
   $rows = array();
+  if (isset($form['table'])) {
+    foreach (element_children($form['table']) as $child) {
+      $row_data = $form['table'][$child];
+      $row = array();
 
-  foreach (element_children($form['table']) as $child) {
-    $row_data = $form['table'][$child];
-    $row = array();
+      //$row[] = array('data' => drupal_render($row_data['pid']));
 
-    //$row[] = array('data' => drupal_render($row_data['pid']));
+      $pid = $row_data['_pid']['#value'];
+      $bookmark_check = $form['bookmark_check'][$pid];
+      $bookmark_check = drupal_render($bookmark_check);
 
-    $pid = $row_data['_pid']['#value'];
-    $bookmark_check = $form['bookmark_check'][$pid];
-    $bookmark_check = drupal_render($bookmark_check);
+      $row[] = array('data' => $bookmark_check);
 
-    $row[] = array('data' => $bookmark_check);
+      $pid = $row_data['pid'];
+      $row[] = array('data' => drupal_render($pid));
 
-    $pid = $row_data['pid'];
-    $row[] = array('data' => drupal_render($pid));
+      $title = $row_data['title'];
+      $row[] = array('data' => drupal_render($title));
 
-    $title = $row_data['title'];
-    $row[] = array('data' => drupal_render($title));
+      $author = $row_data['author'];
+      $row[] = array('data' => drupal_render($author));
 
-    $author = $row_data['author'];
-    $row[] = array('data' => drupal_render($author));
+      $folder_id = $row_data['folder_id'];
+      $row[] = array('data' => drupal_render($folder_id));
 
-    $folder_id = $row_data['folder_id'];
-    $row[] = array('data' => drupal_render($folder_id));
+      $created = $row_data['created'];
+      $row[] = array('data' => drupal_render($created));
 
-    $created = $row_data['created'];
-    $row[] = array('data' => drupal_render($created));
-
-    $rows[] = $row;
+      $rows[] = $row;
+    }
   }
   // Individual table headers.
 
