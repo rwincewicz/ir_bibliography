@@ -17,8 +17,8 @@ module_load_include('inc', 'fedora_repository', 'api/fedora_item');
 module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
 module_load_include('inc', 'ir_citation', 'ir_citation.api');
 module_load_include('inc', 'ir_citation', 'ir_citation');
-module_load_include('inc', 'islandora_fedora_api', 'islandora_fedora_api.object');
-module_load_include('inc', 'islandora_fedora_api', 'islandora_fedora_api.repository');
+// module_load_include('inc', 'islandora_fedora_api', 'islandora_fedora_api.object');
+// module_load_include('inc', 'islandora_fedora_api', 'islandora_fedora_api.repository');
 
 /**
  * Valid permissions for this module
