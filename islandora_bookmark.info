@@ -1,7 +1,7 @@
 ; $Id$
 name = Islandora Bookmark
-description = Allows a Drupal user to bookmark Fedora Object and save them to their sccount or anonymous sessionID
-package = Fedora Repository
+description = Allows a Drupal user to bookmark Fedora Object and save them to their account or anonymous sessionID
+package = Islandora Tools
 dependencies[] = fedora_repository
 dependencies[] = tabs
 version = 6.x-$Format:%h$-dev
