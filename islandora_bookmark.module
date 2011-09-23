@@ -828,9 +828,7 @@ function islandora_bookmark_export_form_submit($form, &$form_state) {
 
     case 3:
       drupal_set_message(t('Export plain text'));
-      $object = new FedoraRepository();
-      $output = $object->fedoraWorking();
-      drupal_set_message($output);
+      
       break;
 
     case 4:
