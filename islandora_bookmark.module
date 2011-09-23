@@ -932,7 +932,7 @@ function islandora_bookmark_citation_form($form) {
   return $form;
   }
   else {
-    drupal_set_message(t('Citation styles directory does not exist!'), 'error');
+    drupal_set_message(t('Citation styles directory does not exist! - Check you have installed and configured the ir_citation module.'), 'error');
     return $form;
   }
 }
